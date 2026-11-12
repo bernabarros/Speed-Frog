@@ -21,7 +21,7 @@ public class RotativeMovement : MonoBehaviour
     [SerializeField] private float _deaccelerationRate = 0.1f;
 
     private PlayerInputHandler input;
-    private GrapplingHook _grapplingHook;
+    private GrapplingHook grapplingHook;
     private SpriteRotationPlayer _sprRot;
     private float horizontalInput;
     private Vector2 groundNormalOG;
@@ -39,7 +39,7 @@ public class RotativeMovement : MonoBehaviour
     private void Awake()
     {
         input = GetComponent<PlayerInputHandler>();
-        _grapplingHook = GetComponent<GrapplingHook>();
+        grapplingHook = GetComponent<GrapplingHook>();
         _sprRot = GetComponentInChildren<SpriteRotationPlayer>();
         groundNormalOG = transform.up; // direção de cima inicial
         startingGravityDirection = Physics2D.gravity.normalized; // o mesmo só que para gravidade
@@ -49,13 +49,13 @@ public class RotativeMovement : MonoBehaviour
     private void Update()
     {
         horizontalInput = input.GetMovementInput().x;
-        _sprRot.RotateSprite(_grapplingHook.IsAttached || isGrappleJumping ? GetGroundAngle() : _rigidbody2D.rotation);
+        _sprRot.RotateSprite(grapplingHook.IsAttached || isGrappleJumping ? GetGroundAngle() : _rigidbody2D.rotation);
         _sprRot.FlipSprite(horizontalInput, isGrounded);
     }
 
     private void FixedUpdate()
     {
-        if (_grapplingHook.IsPulling || _grapplingHook.IsAttached)
+        if (grapplingHook.IsPulling || grapplingHook.IsAttached)
         {
             return;
         }
@@ -235,26 +235,43 @@ public class RotativeMovement : MonoBehaviour
 
     public void Jump(Vector2 movementInput)
     {
-        if (_grapplingHook.IsPulling)
+        if (grapplingHook.IsPulling)
         {
             return;
         }
 
-        if (_grapplingHook.IsAttached)
+        if (grapplingHook.IsAttached)
         {
             Vector2 attachedNormal = groundNormalOG;
-            bool grappleWallUpJump = Vector2.Dot(attachedNormal, Vector2.up) < 0.001f &&
-                movementInput.y > 0f && Mathf.Approximately(movementInput.x, 0f);
-            Vector2 jumpDirection = grappleWallUpJump
-                ? (Vector2.up + attachedNormal * 0.25f).normalized
-                : attachedNormal;
-            _grapplingHook.DetachForJump();
+            Vector2 jumpDir;
+            if (Vector2.Dot(attachedNormal, Vector2.up) < 0.001f &&
+                movementInput.x > 0.5f && movementInput.y > 0.1f ||
+                Vector2.Dot(attachedNormal, Vector2.up) < 0.001f && movementInput.x < -0.5f && movementInput.y > 0.1f)
+            {
+                jumpDir = (Vector2.up+attachedNormal).normalized;
+            }
+            else if (Vector2.Dot(attachedNormal, Vector2.up) < 0.001f &&
+                movementInput.x > 0.5f || Vector2.Dot(attachedNormal, Vector2.up) < 0.001f && movementInput.x < -0.5f)
+            {
+                jumpDir = attachedNormal;
+            }
+            else if (Vector2.Dot(attachedNormal, Vector2.up) < 0.001f &&
+                movementInput.y < -0.1f)
+            {
+                jumpDir = Vector2.down;
+            }
+            else
+            {
+                jumpDir = Vector2.up;
+            }
+
+            grapplingHook.DetachForJump();
             _rigidbody2D.rotation = startingRotation;
             groundNormalOG = -startingGravityDirection;
             isGrappleJumping = true;
             isJumping = true;
             SnapSprite();
-            _rigidbody2D.AddForce(jumpDirection * _jumpForce, ForceMode2D.Impulse);
+            _rigidbody2D.AddForce(jumpDir * _jumpForce, ForceMode2D.Impulse);
             return;
         }
 
