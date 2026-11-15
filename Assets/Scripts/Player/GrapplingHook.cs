@@ -12,30 +12,31 @@ public class GrapplingHook : MonoBehaviour
     [SerializeField] private float _grapplePointLaunchSpeed = 12f;
     [SerializeField, Range(0f, 1f)] private float _unattachedVisualScale = 0.25f;
 
-    private Rigidbody2D _rb;
-    private Collider2D _playerCollider;
-    private RotativeMovement _movement;
-    private bool _isGrappling;
-    private bool _isAttached;
-    private bool _isGrapplePoint;
-    private bool _isAiming;
+    private Rigidbody2D rb;
+    private Collider2D playerCollider;
+    private RotativeMovement movement;
+    private bool isGrappling;
+    private bool isAttached;
+    private bool isGrapplePoint;
+    private bool isAiming;
     private Vector2 _anchor;
     private Vector2 _surfaceNormal;
     private Vector2 _launchDirection;
     private Vector2 _aimDirection = Vector2.right;
-    private float _surfaceOffset;
-    private readonly List<RaycastHit2D> _hitResults = new List<RaycastHit2D>();
+    private float surfaceOffset;
+    private readonly List<RaycastHit2D> hitResults = new List<RaycastHit2D>();
 
-    public bool IsPulling => _isGrappling;
-    public bool IsAttached => _isAttached;
+    public bool IsPulling => isGrappling;
+    public bool IsAttached => isAttached;
 
-    private Vector2 TargetPosition => _anchor + _surfaceNormal * _surfaceOffset;
+    private Vector2 TargetPosition => _anchor + _surfaceNormal * surfaceOffset;
+    [SerializeField] private float _surfaceSkin = 0.02f;
 
     private void Awake()
     {
-        _rb = GetComponent<Rigidbody2D>();
-        _playerCollider = GetComponent<Collider2D>();
-        _movement = GetComponent<RotativeMovement>();
+        rb = GetComponent<Rigidbody2D>();
+        playerCollider = GetComponent<Collider2D>();
+        movement = GetComponent<RotativeMovement>();
 
         _lR.useWorldSpace = true;
         _lR.positionCount = 2;
@@ -49,58 +50,59 @@ public class GrapplingHook : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (_isAttached)
+        if (isAttached) // so sai de uma superficie quando saltar, caso tenha usado lingua na parede
         {
-            _rb.position = TargetPosition;
+            rb.position = TargetPosition;
             StopBody();
             return;
         }
 
-        if (!_isGrappling)
+        if (!isGrappling)
         {
             return;
         }
 
-        Vector2 toTarget = TargetPosition - _rb.position;
+        Vector2 toTarget = TargetPosition - rb.position;
         float distance = toTarget.magnitude;
 
         StopBody();
 
         if (distance <= _stopDistance)
         {
-            _rb.position = TargetPosition;
-            _isGrappling = false;
-
-            if (_isGrapplePoint)
+            rb.position = TargetPosition;
+            isGrappling = false;
+            // se o collider que o raycast colide for um trigger,
+            // adiciona velocidade ao jogador para ele não parar no objeto
+            if (isGrapplePoint)
             {
-                _rb.linearVelocity = (_launchDirection + Vector2.up) * _grapplePointLaunchSpeed;
+                rb.linearVelocity = _launchDirection * _grapplePointLaunchSpeed;
             }
             else
             {
-                _isAttached = true;
-                _movement.AttachToSurface(_surfaceNormal);
+                isAttached = true;
             }
 
+            isGrapplePoint = false;
             return;
         }
 
         float step = Mathf.Min(_pullSpeed * Time.fixedDeltaTime, distance);
-        _rb.MovePosition(_rb.position + toTarget / distance * step);
+        rb.MovePosition(rb.position + toTarget / distance * step);
     }
 
-    public void SetAimState(Vector2 direction, bool isAiming)
+    public void SetAimState(Vector2 direction, bool aiming)
     {
         if (direction.sqrMagnitude > 0.0001f)
         {
             _aimDirection = direction.normalized;
         }
 
-        _isAiming = isAiming && !_isGrappling && !_isAttached;
+        isAiming = aiming && !isGrappling && !isAttached;
     }
 
     public void UseGrapple(Vector2 direction)
     {
-        if (_isGrappling || _isAttached || direction.sqrMagnitude <= 0.0001f)
+        if (isGrappling || isAttached || direction.sqrMagnitude <= 0.0001f)
         {
             return;
         }
@@ -113,18 +115,21 @@ public class GrapplingHook : MonoBehaviour
             useTriggers = true,
             useLayerMask = false
         };
-        _hitResults.Clear();
-        int hitCount = Physics2D.Raycast(_lR.transform.position, direction, filter, _hitResults, _length);
+        hitResults.Clear();
+        int hitCount = Physics2D.Raycast(_lR.transform.position, direction, filter, hitResults, _length);
+
+        // cria um raycast no final da lingua que pega
+        // num collider caso tenha tag grapple
 
         RaycastHit2D hit = default;
         bool foundTarget = false;
 
         for (int i = 0; i < hitCount && !foundTarget; i++)
         {
-            Transform target = _hitResults[i].collider.transform;
+            Transform target = hitResults[i].collider.transform;
             if (!target.IsChildOf(transform) && HasGrapplingTag(target))
             {
-                hit = _hitResults[i];
+                hit = hitResults[i];
                 foundTarget = true;
             }
         }
@@ -134,41 +139,37 @@ public class GrapplingHook : MonoBehaviour
             return;
         }
 
-        _isGrapplePoint = hit.collider.isTrigger;
+        isGrapplePoint = hit.collider.isTrigger;
+        _launchDirection = direction;
         _anchor = hit.point;
         _surfaceNormal = hit.normal.sqrMagnitude > 0.0001f ? hit.normal.normalized : -direction;
-        if (!_isGrapplePoint)
+        if (!isGrapplePoint)
         {
-            RotateImmediatelyToSurface(_surfaceNormal);
+            movement.AttachToSurface(_surfaceNormal);
         }
-        _surfaceOffset = GetSurfaceOffset(_surfaceNormal);
-        _launchDirection = direction;
-        _isGrappling = true;
-        _isAiming = false;
+        surfaceOffset = GetSurfaceOffset(_surfaceNormal);
+        isGrappling = true;
+        isAiming = false;
         StopBody();
     }
 
     public void DetachForJump()
     {
-        _isAttached = false;
+        isAttached = false;
     }
 
     private void StopBody()
     {
-        _rb.linearVelocity = Vector2.zero;
-        _rb.angularVelocity = 0f;
-    }
-
-    private void RotateImmediatelyToSurface(Vector2 normal)
-    {
-        _rb.rotation = Mathf.Atan2(normal.y, normal.x) * Mathf.Rad2Deg - 90f;
-        Physics2D.SyncTransforms();
+        rb.linearVelocity = Vector2.zero;
+        rb.angularVelocity = 0f;
     }
 
     private float GetSurfaceOffset(Vector2 normal)
     {
-        Bounds bounds = _playerCollider.bounds;
-        return Mathf.Abs(normal.x) * bounds.extents.x + Mathf.Abs(normal.y) * bounds.extents.y;
+        Bounds bounds = playerCollider.bounds;
+        return Mathf.Abs(normal.x) * bounds.extents.x
+             + Mathf.Abs(normal.y) * bounds.extents.y
+             + _surfaceSkin;
     }
 
     private static bool HasGrapplingTag(Transform target)
@@ -188,7 +189,7 @@ public class GrapplingHook : MonoBehaviour
 
     private void UpdateLine()
     {
-        bool showLine = _isAiming || _isGrappling || _isAttached;
+        bool showLine = isAiming || isGrappling || isAttached;
         _lR.enabled = showLine;
         if (!showLine)
         {
@@ -196,7 +197,7 @@ public class GrapplingHook : MonoBehaviour
         }
 
         Vector3 start = _lR.transform.position;
-        Vector2 end = _isGrappling || _isAttached
+        Vector2 end = isGrappling || isAttached
             ? _anchor
             : (Vector2)start + _aimDirection * (_length * _unattachedVisualScale);
 

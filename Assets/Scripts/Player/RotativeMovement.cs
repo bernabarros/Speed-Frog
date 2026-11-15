@@ -55,7 +55,7 @@ public class RotativeMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (grapplingHook.IsPulling || grapplingHook.IsAttached)
+        if (grapplingHook.IsPulling || grapplingHook.IsAttached) // não move caso esteja agarrado ou a ser levado pela lingua
         {
             return;
         }
@@ -76,7 +76,7 @@ public class RotativeMovement : MonoBehaviour
         // e assim calcula o produto escalar entre as gravidades
 
         bool isIdle = Mathf.Approximately(horizontalInput, 0f);
-        isGrounded = touchingGround && !isJumping && !(isIdle && gravityPullsAwayFromSurface);
+        isGrounded = touchingGround && !isJumping && !(isIdle && gravityPullsAwayFromSurface); // se estiver agarrado numa parede e saltar cai
 
         if (isGrounded) groundNormalOG = groundNormal;
 
@@ -234,6 +234,19 @@ public class RotativeMovement : MonoBehaviour
         => Quaternion.Euler(0f, 0f, _rigidbody2D.rotation - startingRotation) * startingGravityDirection;
 
     public void Jump(Vector2 movementInput)
+    /// o salto quando agarrado a uma parede funciona assim,
+    /// se o jogador não tiver nenhuma direção no analógico,
+    /// apenas salta para cima.
+    /// 
+    /// caso tiver direção esquerda/direita,
+    /// vai diretamente para essa direção.
+    /// 
+    /// caso isso + cima,
+    /// vai para cima com a direção em especifico,
+    /// e tem menos salto que se fosse só para cima.
+    /// 
+    /// caso a direção for abaixo,
+    /// vai direetamente abaixo. (capitão óbvio)
     {
         if (grapplingHook.IsPulling)
         {
