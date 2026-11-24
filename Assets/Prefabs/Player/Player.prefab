@@ -293,6 +293,7 @@ GameObject:
   - component: {fileID: 5003531605014777333}
   - component: {fileID: 5861456108867136409}
   - component: {fileID: 6219435257614030707}
+  - component: {fileID: 4265719016347620000}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -433,6 +434,7 @@ MonoBehaviour:
   _returnToNormalSpeed: 180
   _returnToNormalDelay: 0.25
   _deaccelerationRate: 1.5
+  _airDeaccelerationScale: 0.25
 --- !u!70 &5600200506091094493
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
@@ -504,8 +506,22 @@ MonoBehaviour:
   _pullSpeed: 25
   _stopDistance: 0.2
   _grapplePointLaunchSpeed: 15
+  _wallNormalTolerance: 0.3
   _unattachedVisualScale: 0.25
   _surfaceSkin: 0.02
+--- !u!114 &4265719016347620000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8192485488344172728}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 581f84f002fc480d9ff31ef4ce335d88, type: 3}
+  m_Name: ""
+  m_EditorClassIdentifier: Assembly-CSharp::GrappleColliderToggle
+  _disableDuration: 1
 --- !u!114 &6219435257614030707
 MonoBehaviour:
   m_ObjectHideFlags: 0

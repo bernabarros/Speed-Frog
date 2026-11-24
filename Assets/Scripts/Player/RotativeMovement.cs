@@ -19,6 +19,7 @@ public class RotativeMovement : MonoBehaviour
     [SerializeField] private float _returnToNormalSpeed = 90f;
     [SerializeField] private float _returnToNormalDelay = 0.25f;
     [SerializeField] private float _deaccelerationRate = 0.1f;
+    [SerializeField, Range(0f, 1f)] private float _airDeaccelerationScale = 0.5f;
 
     private PlayerInputHandler input;
     private GrapplingHook grapplingHook;
@@ -124,11 +125,13 @@ public class RotativeMovement : MonoBehaviour
 
         bool isFlatGround = Flatness >= 0.001f; // verifica se é chão
 
-        if (isGrounded && isIdle && isFlatGround)
+        if (isIdle && (!isGrounded || isFlatGround))
         {
-            Vector2 tangent = GetSurfaceTangent(groundNormalOG);
+            Vector2 tangent = isGrounded ? GetSurfaceTangent(groundNormalOG) : transform.right;
             float tangentSpeed = Vector2.Dot(_rigidbody2D.linearVelocity, tangent);
             float deceleration = _movementSpeed * _deaccelerationRate;
+            if (!isGrounded)
+                deceleration *= _airDeaccelerationScale;
 
             SetVelocityAlong(tangent, Mathf.MoveTowards(tangentSpeed, 0f, deceleration * Time.fixedDeltaTime));
         }
@@ -246,7 +249,7 @@ public class RotativeMovement : MonoBehaviour
     /// e tem menos salto que se fosse só para cima.
     /// 
     /// caso a direção for abaixo,
-    /// vai direetamente abaixo. (capitão óbvio)
+    /// vai diretamente abaixo. (capitão óbvio)
     {
         if (grapplingHook.IsPulling)
         {
