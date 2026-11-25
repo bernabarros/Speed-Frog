@@ -142,7 +142,9 @@ public class GrapplingHook : MonoBehaviour
 
             bool isGrapplingTarget = HasGrapplingTag(target);
             bool isEnableTarget = colliderToggle.IsEnableTarget(target);
-            if (candidate.collider.isTrigger && !isGrapplingTarget && !isEnableTarget)
+            bool isSwitch = candidate.collider.GetComponentInParent<Switch>() != null;
+
+            if (candidate.collider.isTrigger && !isGrapplingTarget && !isEnableTarget && !isSwitch)
             {
                 continue;
             }
@@ -157,6 +159,12 @@ public class GrapplingHook : MonoBehaviour
         if (nearestDistance == float.PositiveInfinity)
         {
             return;
+        }
+
+        Switch hitSwitch = hit.collider.GetComponentInParent<Switch>();
+        if (hitSwitch != null)
+        {
+            hitSwitch.Activate();
         }
 
         colliderToggle.HandleGrappleHit(hit.collider);
