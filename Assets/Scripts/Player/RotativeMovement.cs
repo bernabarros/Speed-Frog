@@ -11,7 +11,6 @@ public class RotativeMovement : MonoBehaviour
     [SerializeField] private float _jumpForce = 7f; // (lol)
 
     [SerializeField] private float _gravityStrength = 9.81f;
-    [SerializeField, Range(0f, 1f)] private float _surfaceGravityMovementScale = 0.25f;
     [SerializeField] private float _groundCheckDistance = 0.2f;
     [SerializeField] private float _groundProbeOffset = 0.3f;
     [SerializeField] private float _groundSnapForce = 3f;
@@ -19,7 +18,10 @@ public class RotativeMovement : MonoBehaviour
     [SerializeField] private float _returnToNormalSpeed = 90f;
     [SerializeField] private float _returnToNormalDelay = 0.25f;
     [SerializeField] private float _deaccelerationRate = 0.1f;
-    [SerializeField, Range(0f, 1f)] private float _airDeaccelerationScale = 0.5f;
+    [SerializeField] private float _frictionRate = 40f;
+    [SerializeField] private float _slopeFactor = 80f;
+    [SerializeField, Min(0f)] private float _airDragRate = 1.5f;
+    [SerializeField, Min(0f)] private float _wallFallSpeedThreshold = 3f;
 
     private PlayerInputHandler input;
     private GrapplingHook grapplingHook;
@@ -81,6 +83,59 @@ public class RotativeMovement : MonoBehaviour
 
         if (isGrounded) groundNormalOG = groundNormal;
 
+        if (isGrounded)
+        {
+            Vector2 tangent = GetSurfaceTangent(groundNormalOG);
+            float downhillAcceleration = _slopeFactor
+                * Vector2.Dot(startingGravityDirection, tangent);
+            float tangentSpeed = Vector2.Dot(_rigidbody2D.linearVelocity, tangent);
+
+            if (isIdle && (Mathf.Approximately(downhillAcceleration, 0f) || tangentSpeed * downhillAcceleration < 0f))
+                tangentSpeed = Mathf.MoveTowards(tangentSpeed, 0f, _frictionRate * Time.fixedDeltaTime);
+
+            SetVelocityAlong(tangent, tangentSpeed + downhillAcceleration * Time.fixedDeltaTime);
+        }
+
+        if (horizontalInput != 0f)
+        {
+            Vector2 velocity = _rigidbody2D.linearVelocity;
+            Vector2 tangent = isGrounded ? GetSurfaceTangent(groundNormalOG) : transform.right;
+            float currentSpeed = Vector2.Dot(velocity, tangent);
+            float inputDirection = Mathf.Sign(horizontalInput);
+            float acceleratedSpeed = currentSpeed;
+
+            if (currentSpeed * inputDirection < 0f)
+            {
+                float deceleration = _deaccelerationRate;
+                acceleratedSpeed = Mathf.MoveTowards(currentSpeed, 0f, deceleration * Time.fixedDeltaTime);
+            }
+            else if (currentSpeed * inputDirection < _movementSpeed)
+            {
+                acceleratedSpeed += inputDirection * _accelerationRate * Time.fixedDeltaTime;
+                if (acceleratedSpeed * inputDirection > _movementSpeed)
+                    acceleratedSpeed = inputDirection * _movementSpeed;
+            }
+
+            Vector2 normal = isGrounded ? groundNormalOG : (Vector2)transform.up;
+            Vector2 normalVelocity = normal * Vector2.Dot(velocity, normal);
+            _rigidbody2D.linearVelocity = tangent * acceleratedSpeed + normalVelocity; // velocidade consoante a superficie
+        }
+
+        if (isGrounded && Flatness <= 0f)
+        {
+            Vector2 tangent = GetSurfaceTangent(groundNormalOG);
+            float surfaceSpeed = Vector2.Dot(_rigidbody2D.linearVelocity, tangent);
+            if (Mathf.Abs(surfaceSpeed) < _wallFallSpeedThreshold)
+                isGrounded = false;
+        }
+
+        if (!isGrounded)
+        {
+            Vector2 horizontalDirection = new Vector2(-startingGravityDirection.y, startingGravityDirection.x);
+            float horizontalSpeed = Vector2.Dot(_rigidbody2D.linearVelocity, horizontalDirection);
+            SetVelocityAlong(horizontalDirection, horizontalSpeed * Mathf.Exp(-_airDragRate * Time.fixedDeltaTime));
+        }
+
         if (onlyOneSideProbeHit)
         {
             oneSideProbeDuration += Time.fixedDeltaTime;
@@ -93,26 +148,6 @@ public class RotativeMovement : MonoBehaviour
             RotateToGround(isGrounded, _rotationSpeed);
         }
 
-        if (horizontalInput != 0f)
-        {
-            Vector2 velocity = _rigidbody2D.linearVelocity;
-            Vector2 tangent = isGrounded ? GetSurfaceTangent(groundNormalOG) : transform.right;
-            float currentSpeed = Vector2.Dot(velocity, tangent);
-            float inputDirection = Mathf.Sign(horizontalInput);
-            float acceleratedSpeed = currentSpeed;
-
-            if (currentSpeed * inputDirection < _movementSpeed)
-            {
-                acceleratedSpeed += inputDirection * _accelerationRate * Time.fixedDeltaTime;
-                if (acceleratedSpeed * inputDirection > _movementSpeed)
-                    acceleratedSpeed = inputDirection * _movementSpeed;
-            }
-
-            Vector2 normal = isGrounded ? groundNormalOG : (Vector2)transform.up;
-            Vector2 normalVelocity = normal * Vector2.Dot(velocity, normal);
-            _rigidbody2D.linearVelocity = tangent * acceleratedSpeed + normalVelocity; // velocidade consoante a superficie
-        }
-
         ApplyGravity(isGrounded, isIdle, gravityPullsAwayFromSurface);
 
         if (isGrounded)
@@ -121,19 +156,6 @@ public class RotativeMovement : MonoBehaviour
                 SetVelocityAlong(groundNormalOG, 0f);
 
             _rigidbody2D.AddForce(-groundNormalOG * _groundSnapForce, ForceMode2D.Force);
-        }
-
-        bool isFlatGround = Flatness >= 0.001f; // verifica se é chão
-
-        if (isIdle && (!isGrounded || isFlatGround))
-        {
-            Vector2 tangent = isGrounded ? GetSurfaceTangent(groundNormalOG) : transform.right;
-            float tangentSpeed = Vector2.Dot(_rigidbody2D.linearVelocity, tangent);
-            float deceleration = _movementSpeed * _deaccelerationRate;
-            if (!isGrounded)
-                deceleration *= _airDeaccelerationScale;
-
-            SetVelocityAlong(tangent, Mathf.MoveTowards(tangentSpeed, 0f, deceleration * Time.fixedDeltaTime));
         }
     }
 
@@ -172,17 +194,11 @@ public class RotativeMovement : MonoBehaviour
             return;
 
         Vector2 gravity = startingGravityDirection * _gravityStrength;
-        if (isGrounded && !isIdle)
-        {
+        if (isGrounded)
             gravity = GetGroundGravity(groundNormalOG);
-            if (IsSlope())
-                gravity = groundNormalOG * Vector2.Dot(gravity, groundNormalOG);
-        }
 
         _rigidbody2D.AddForce(gravity, ForceMode2D.Force);
     }
-
-    private bool IsSlope() => Flatness > 0.001f && Flatness < 0.999f;
 
     private Vector2 GetSurfaceTangent(Vector2 groundNormal)
     {
@@ -193,9 +209,7 @@ public class RotativeMovement : MonoBehaviour
     private Vector2 GetGroundGravity(Vector2 groundNormal) // calcula quanto a gravidade é aplicada na velo consoante a superficie
     {
         Vector2 gravity = startingGravityDirection * _gravityStrength;
-        Vector2 intoSurface = groundNormal * Vector2.Dot(gravity, groundNormal);
-
-        return intoSurface + (gravity - intoSurface) * _surfaceGravityMovementScale;
+        return groundNormal * Vector2.Dot(gravity, groundNormal);
     }
 
     private bool TryGetGroundNormal(out Vector2 groundNormal, out bool onlyOneSideProbeHit) // tem 3 probes por baixo do jogador

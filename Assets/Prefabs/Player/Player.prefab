@@ -422,19 +422,21 @@ MonoBehaviour:
   _groundLayer:
     serializedVersion: 2
     m_Bits: 8
-  _movementSpeed: 30
-  _accelerationRate: 13
+  _movementSpeed: 25
+  _accelerationRate: 30
   _jumpForce: 20
   _gravityStrength: 39.24
-  _surfaceGravityMovementScale: 0.5
   _groundCheckDistance: 0.2
   _groundProbeOffset: 0.3
   _groundSnapForce: 20
-  _rotationSpeed: 720
-  _returnToNormalSpeed: 180
+  _rotationSpeed: 360
+  _returnToNormalSpeed: 90
   _returnToNormalDelay: 0.25
-  _deaccelerationRate: 1.5
-  _airDeaccelerationScale: 0.25
+  _deaccelerationRate: 40
+  _frictionRate: 60
+  _slopeFactor: 30
+  _airDragRate: 1.5
+  _wallFallSpeedThreshold: 3
 --- !u!70 &5600200506091094493
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
@@ -509,19 +511,6 @@ MonoBehaviour:
   _wallNormalTolerance: 0.3
   _unattachedVisualScale: 0.25
   _surfaceSkin: 0.02
---- !u!114 &4265719016347620000
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8192485488344172728}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 581f84f002fc480d9ff31ef4ce335d88, type: 3}
-  m_Name: ""
-  m_EditorClassIdentifier: Assembly-CSharp::GrappleColliderToggle
-  _disableDuration: 1
 --- !u!114 &6219435257614030707
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -535,3 +524,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ScoreSystem
   scoreText: {fileID: 0}
+--- !u!114 &4265719016347620000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8192485488344172728}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 581f84f002fc480d9ff31ef4ce335d88, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GrappleColliderToggle
+  _disableDuration: 1
