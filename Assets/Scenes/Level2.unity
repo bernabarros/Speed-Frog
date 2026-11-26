@@ -365,6 +365,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2463871125583384161, guid: fa1c47ed735adf94e8841123a1428545, type: 3}
+      propertyPath: _deaccelerationRate
+      value: 2.5
+      objectReference: {fileID: 0}
     - target: {fileID: 6219435257614030707, guid: fa1c47ed735adf94e8841123a1428545, type: 3}
       propertyPath: scoreText
       value: 
@@ -4175,7 +4179,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44244e5b405ba014192ba6dfc4c4c844, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelChange
-  levelIndex: 0
+  levelIndex: 2
   changeLevelAction: {fileID: -5351457528531785287, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
 --- !u!212 &641024408
 SpriteRenderer:
@@ -13074,5 +13078,5 @@ SceneRoots:
   - {fileID: 785597102}
   - {fileID: 1901062136}
   - {fileID: 1884601402}
-  - {fileID: 641024409}
   - {fileID: 1988305980}
+  - {fileID: 641024409}
